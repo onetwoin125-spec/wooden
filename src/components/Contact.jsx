@@ -1,17 +1,53 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
+import emailjs from '@emailjs/browser'
 
 function Contact() {
+  const formRef = useRef(null)
+  const [status, setStatus] = useState({ message: '', type: '', visible: false })
+  const [submitting, setSubmitting] = useState(false)
+
   useEffect(() => {
-    // Initialize EmailJS
-    const script = document.createElement('script')
-    script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js'
-    script.async = true
-    document.body.appendChild(script)
+    // Clear status messages when component mounts
+    setStatus({ message: '', type: '', visible: false })
   }, [])
 
-  const handleSubmit = (e) => {
+  const SERVICE_ID = 'service_c9d45le'
+  const TEMPLATE_ID = 'template_uxssjk7'
+  const PUBLIC_KEY = 'rNQ9-Wm6ZVPIFLOeU'
+
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    // Form handling with EmailJS would go here
+
+    if (!formRef.current) return
+
+    if ([SERVICE_ID, TEMPLATE_ID, PUBLIC_KEY].includes('YOUR_SERVICE_ID') ||
+        [SERVICE_ID, TEMPLATE_ID, PUBLIC_KEY].includes('YOUR_TEMPLATE_ID') ||
+        [SERVICE_ID, TEMPLATE_ID, PUBLIC_KEY].includes('YOUR_PUBLIC_KEY')) {
+      setStatus({
+        message: 'Email service is not configured. Please add your EmailJS service ID, template ID, and public key.',
+        type: 'error',
+        visible: true
+      })
+      return
+    }
+
+    setSubmitting(true)
+    setStatus({ message: '', type: '', visible: false })
+
+    try {
+      await emailjs.sendForm(SERVICE_ID, TEMPLATE_ID, formRef.current, PUBLIC_KEY)
+      setStatus({ message: 'Message sent successfully. Thank you!', type: 'success', visible: true })
+      formRef.current.reset()
+    } catch (error) {
+      console.error('EmailJS error:', error)
+      setStatus({
+        message: 'We could not send your message. Please try again later.',
+        type: 'error',
+        visible: true
+      })
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -25,7 +61,7 @@ function Contact() {
         </div>
 
         <div className="contact-grid">
-          <form className="form" onSubmit={handleSubmit}>
+          <form className="form" ref={formRef} onSubmit={handleSubmit}>
             <div className="field">
               <label htmlFor="name">Full name</label>
               <input id="name" name="name" type="text" autoComplete="name" placeholder="Your name" required />
@@ -54,9 +90,16 @@ function Contact() {
               <p className="hint muted">Tell us what you want and we'll respond quickly.</p>
             </div>
             <div className="form-actions">
-              <button className="btn btn-primary" type="submit">Send message</button>
+              <button className="btn btn-primary" type="submit" disabled={submitting}>
+                {submitting ? 'Sending...' : 'Send message'}
+              </button>
               <button className="btn btn-ghost" type="reset">Reset</button>
             </div>
+            {status.visible && (
+              <p className={status.type === 'success' ? 'form-success' : 'form-error'}>
+                {status.message}
+              </p>
+            )}
           </form>
 
           <aside className="contact-card" aria-label="Business details">
